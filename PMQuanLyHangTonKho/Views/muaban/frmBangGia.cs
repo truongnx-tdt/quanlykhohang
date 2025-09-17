@@ -1,7 +1,11 @@
-﻿using System;
+﻿using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Office2010.Excel;
+using PMQuanLyHangTonKho.Lib;
+using PMQuanLyHangTonKho.Models.DTO;
+using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Windows.Forms;
-using PMQuanLyHangTonKho.Lib;
 
 namespace PMQuanLyHangTonKho.Views.muaban
 {
@@ -9,13 +13,20 @@ namespace PMQuanLyHangTonKho.Views.muaban
     {
         // Master + Detail
         string strQueryMaster =
-            @"SELECT  pl.Id,
-                      pl.Name,
-                      CASE pl.Type WHEN 'P' THEN N'Mua' ELSE N'Bán' END AS [Loại],
-                      pl.StartDate, pl.EndDate,
-                      CASE pl.IsActive WHEN 1 THEN N'Đang dùng' ELSE N'Ngừng' END AS [Trạng thái],
-                      pl.Notes, pl.UserCreate, pl.DateCreate, pl.UserUpdate, pl.DateUpdate
-              FROM PriceListMaster pl ";
+              @"SELECT  pl.Id                          ,
+                        pl.Name                        ,
+                        CASE pl.Type WHEN 'P' THEN N'Mua' ELSE N'Bán' END AS [Loại],
+                        pl.StartDate                   ,
+                        pl.EndDate                     ,
+                        CASE pl.IsActive WHEN 1 THEN N'Hoạt động' ELSE N'Ngừng' END AS [Trạng thái],
+                        pl.Notes                       ,
+                        pl.UserCreate                  ,
+                        pl.DateCreate                  ,
+                        pl.UserUpdate                  ,
+                        pl.DateUpdate                  ,
+                        pl.Type,
+                        pl.IsActive
+                FROM PriceListMaster pl";
 
         string strQueryDetail =
             @"SELECT  d.PriceListId,
@@ -53,12 +64,7 @@ namespace PMQuanLyHangTonKho.Views.muaban
             DLLSystem.Init(this);
 
             this.Load += frm_Load;
-            this.menuTimKiem.Click += menuTimKiem_Click;
-            this.menuThem.Click += menuThem_Click;
-            this.menuSua.Click += menuSua_Click;
-            this.menuXoa.Click += menuXoa_Click;
-            this.menuLamMoi.Click += menuLamMoi_Click;
-            this.menuXuatExcel.Click += menuCopy_Click;
+            this.menuXuatExcel.Click += menuXuatExcel_Click;
             this.menuThoat.Click += (s, e) => Close();
             this.dtgvMaster.CellClick += dtgvMaster_CellClick;
         }
@@ -118,24 +124,116 @@ namespace PMQuanLyHangTonKho.Views.muaban
             using (var frm = new frmEditBangGia())
             {
                 frm.Text = "Sửa bảng giá";
-                //frm.SetValue(binSource); 
+                frm.SetValue(binSource);
                 frm.ShowDialog();
             }
             if (isLoad) LoadData();
         }
 
-        private void menuCopy_Click(object sender, EventArgs e)
+        private void menuXuatExcel_Click(object sender, EventArgs e)
         {
-            if (dtgvMaster.RowCount == 0) { Alert.Error("Chưa có dữ liệu để sao chép"); return; }
-            isCopy = true;
-            using (var frm = new frmEditBangGia())
+            if (dtgvMaster.RowCount == 0)
             {
-                frm.Text = "Sao chép bảng giá";
-                //frm.SetValue(binSource);
-                frm.ShowDialog();
+                Alert.Error("Chưa có dữ liệu để xuất Excel");
+                return;
             }
-            isCopy = false;
-            if (isLoad) LoadData();
+
+            // Lấy dữ liệu từ DataGridView
+            var priceListDTO = new List<PriceListDTO>();
+            var customers = new List<PriceListDetailDTO>();
+            foreach (DataGridViewRow row in dtgvMaster.Rows)
+            {
+                priceListDTO.Add(new PriceListDTO
+                {
+                    PriceId = Helper.GetCell<string>(row, "Id"),
+                    PriceName = Helper.GetCell<string>(row, "Name"),
+                    PriceType = Helper.GetCell<string>(row, "Loại"),
+                    EffectiveFrom = Helper.GetCell<DateTime?>(row, "StartDate") ?? DateTime.MinValue,
+                    EffectiveTo = Helper.GetCell<DateTime?>(row, "EndDate") ?? DateTime.MinValue,
+                    Status = Helper.GetCell<string>(row, "Trạng thái"),
+                    Note = Helper.GetCell<string>(row, "Notes"),
+                    CreatedBy = Helper.GetCell<string>(row, "UserCreate"),
+                    CreatedDate = Helper.GetCell<DateTime?>(row, "DateCreate") ?? DateTime.MinValue,
+                    ModifiedBy = Helper.GetCell<string>(row, "UserUpdate"),
+                    ModifiedDate = Helper.GetCell<DateTime?>(row, "DateUpdate") ?? DateTime.MinValue
+                });
+
+                // Chi tiết from Data base
+                var queryDetail = $@"SELECT  d.PriceListId,
+                                              d.ProductId,
+                                              p.Name,
+                                              d.FromQty, d.ToQty, d.UnitPrice, d.Notes
+                                      FROM PriceListDetail d
+                                      INNER JOIN Products p ON d.ProductId = p.Id 
+                                      WHERE d.PriceListId = @PriceListId
+                                      ORDER BY d.ProductId, d.FromQty";
+                var dtDetail = Models.SQL.QueryList<PriceListDetailDTO>(queryDetail, new Dictionary<string, object> { { "PriceListId", Helper.GetCell<string>(row, "Id") } },
+                    projector: r => new PriceListDetailDTO
+                    {
+                        PriceListId = r["PriceListId"].ToString(),
+                        ProductId = r["ProductId"].ToString(),
+                        Name = r["Name"].ToString(),
+                        FromQty = Convert.ToDecimal(r["FromQty"]),
+                        ToQty = Convert.ToDecimal(r["ToQty"]),
+                        UnitPrice = Convert.ToDecimal(r["UnitPrice"]),
+                        Notes = r["Notes"] as string
+                    });
+
+                foreach (var item in dtDetail)
+                {
+                    customers.Add(item);
+                }
+            }
+
+
+
+
+
+            var sheets = new List<ExcelExporter.ObjectSheetSpec>
+            {
+        //         string[] columnsNameMaster = new string[]
+        //{
+        //    "Mã bảng giá","Tên","Loại","Hiệu lực từ","Hiệu lực đến","Trạng thái",
+        //    "Ghi chú","Người tạo","Ngày tạo","Người sửa","Ngày sửa"
+        //};
+
+     
+                new ExcelExporter.ObjectSheetSpec(
+                    "Bảng giá",
+                    priceListDTO,
+                    new List<ExcelExporter.ObjectColumnSpec>{
+                        new ExcelExporter.ObjectColumnSpec{ Header="Mã bảng giá", Selector=o=>((PriceListDTO)o).PriceId },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Tên", Selector=o=>((PriceListDTO)o).PriceName },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Loại", Selector=o=>((PriceListDTO)o).PriceType },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Hiệu lực từ", Selector=o=>((PriceListDTO)o).EffectiveFrom, DataType=XLDataType.DateTime, NumberFormat="dd/MM/yyyy" },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Hiệu lực đến", Selector=o=>((PriceListDTO)o).EffectiveTo, DataType=XLDataType.DateTime, NumberFormat="dd/MM/yyyy" },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Trạng thái", Selector=o=>((PriceListDTO)o).Status },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Ghi chú", Selector=o=>((PriceListDTO)o).Note },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Người tạo", Selector=o=>((PriceListDTO)o).CreatedBy },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Ngày tạo", Selector=o=>((PriceListDTO)o).CreatedDate, DataType=XLDataType.DateTime, NumberFormat="dd/MM/yyyy HH:mm:ss" },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Người sửa", Selector=o=>((PriceListDTO)o).ModifiedBy },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Ngày sửa", Selector=o=>((PriceListDTO)o).ModifiedDate, DataType=XLDataType.DateTime, NumberFormat="dd/MM/yyyy HH:mm:ss" }
+                    }
+                ),
+        //           string[] columnsNameDetail = new string[]
+        //{
+        //    "Mã bảng giá","Mã hàng","Tên hàng","Từ SL","Đến SL","Đơn giá","Ghi chú"
+        //};
+                new ExcelExporter.ObjectSheetSpec(
+                    "Chi tiết",
+                    customers,
+                    new List<ExcelExporter.ObjectColumnSpec>{
+                        new ExcelExporter.ObjectColumnSpec{ Header="Mã bảng giá", Selector=o=>((PriceListDetailDTO)o).PriceListId },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Mã hàng", Selector=o=>((PriceListDetailDTO)o).ProductId },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Tên hàng", Selector=o=>((PriceListDetailDTO)o).Name },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Từ SL", Selector=o=>((PriceListDetailDTO)o).FromQty, DataType=XLDataType.Number },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Đến SL", Selector=o=>((PriceListDetailDTO)o).ToQty, DataType=XLDataType.Number },
+                        new ExcelExporter.ObjectColumnSpec{ DataType=XLDataType.Number, Header="Đơn giá", Selector=o=>((PriceListDetailDTO)o).UnitPrice, NumberFormat="#,##0.00" },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Ghi chú", Selector=o=>((PriceListDetailDTO)o).Notes }
+                    }
+                )
+            };
+            ExcelExporter.ExportObjectsMulti("BaoCao.xlsx", sheets);
         }
 
         private void menuXoa_Click(object sender, EventArgs e)
@@ -147,7 +245,6 @@ namespace PMQuanLyHangTonKho.Views.muaban
             if (!confirm) return;
 
             var id = dtgvMaster.Rows[dtgvMaster.CurrentCell.RowIndex].Cells[0].Value.ToString();
-            ListEdit.Delete("PriceListDetail", "PriceListId", id);
             ListEdit.Delete("PriceListMaster", "Id", id);
 
             LoadData();

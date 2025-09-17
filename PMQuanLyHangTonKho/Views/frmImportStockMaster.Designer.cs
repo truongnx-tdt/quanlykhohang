@@ -36,13 +36,13 @@
             this.menuXoa = new System.Windows.Forms.ToolStripMenuItem();
             this.menuXuatExcel = new System.Windows.Forms.ToolStripMenuItem();
             this.menuCopy = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuIn = new System.Windows.Forms.ToolStripMenuItem();
             this.menuLamMoi = new System.Windows.Forms.ToolStripMenuItem();
             this.menuThoat = new System.Windows.Forms.ToolStripMenuItem();
             this.menuTimKiem = new System.Windows.Forms.ToolStripMenuItem();
             this.dtgvMaster = new System.Windows.Forms.DataGridView();
             this.dtgvDetail = new System.Windows.Forms.DataGridView();
             this.binSource = new System.Windows.Forms.BindingSource(this.components);
-            this.menuIn = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dtgvMaster)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dtgvDetail)).BeginInit();
@@ -103,6 +103,13 @@
             this.menuCopy.Size = new System.Drawing.Size(63, 20);
             this.menuCopy.Text = "Copy";
             // 
+            // menuIn
+            // 
+            this.menuIn.Image = ((System.Drawing.Image)(resources.GetObject("menuIn.Image")));
+            this.menuIn.Name = "menuIn";
+            this.menuIn.Size = new System.Drawing.Size(81, 20);
+            this.menuIn.Text = "In phiếu";
+            // 
             // menuLamMoi
             // 
             this.menuLamMoi.Image = ((System.Drawing.Image)(resources.GetObject("menuLamMoi.Image")));
@@ -144,13 +151,6 @@
             this.dtgvDetail.Name = "dtgvDetail";
             this.dtgvDetail.Size = new System.Drawing.Size(1047, 326);
             this.dtgvDetail.TabIndex = 436;
-            // 
-            // menuIn
-            // 
-            this.menuIn.Image = ((System.Drawing.Image)(resources.GetObject("menuIn.Image")));
-            this.menuIn.Name = "menuIn";
-            this.menuIn.Size = new System.Drawing.Size(81, 20);
-            this.menuIn.Text = "In phiếu";
             // 
             // frmImportStockMaster
             // 

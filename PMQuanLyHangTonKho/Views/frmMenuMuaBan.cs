@@ -23,5 +23,11 @@ namespace PMQuanLyHangTonKho.Views
             frmBangGia frm = new frmBangGia();
             frm.ShowDialog();
         }
+
+        private void menuHoaDonMua_Click(object sender, EventArgs e)
+        {
+            frmHoaDonMua frm = new frmHoaDonMua();
+            frm.ShowDialog();
+        }
     }
 }

@@ -50,6 +50,7 @@
             this.btnChooseSupplier = new System.Windows.Forms.Button();
             this.txtSupplierId = new System.Windows.Forms.TextBox();
             this.label7 = new System.Windows.Forms.Label();
+            this.btnLayTuHoaDonMua = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dtgvDetail)).BeginInit();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
@@ -116,7 +117,6 @@
             this.btnSave.Text = "Lưu dữ liệu";
             this.btnSave.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.btnSave.UseVisualStyleBackColor = false;
-            this.btnSave.Click += new System.EventHandler(this.btnSave_Click_1);
             // 
             // label2
             // 
@@ -273,11 +273,25 @@
             this.label7.TabIndex = 443;
             this.label7.Text = "Nhà cung cấp";
             // 
+            // btnLayTuHoaDonMua
+            // 
+            this.btnLayTuHoaDonMua.BackColor = System.Drawing.SystemColors.Control;
+            this.btnLayTuHoaDonMua.Font = new System.Drawing.Font("Tahoma", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnLayTuHoaDonMua.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnLayTuHoaDonMua.Location = new System.Drawing.Point(557, 525);
+            this.btnLayTuHoaDonMua.Name = "btnLayTuHoaDonMua";
+            this.btnLayTuHoaDonMua.Size = new System.Drawing.Size(125, 35);
+            this.btnLayTuHoaDonMua.TabIndex = 447;
+            this.btnLayTuHoaDonMua.Text = "Lấy dữ liệu từ HDM";
+            this.btnLayTuHoaDonMua.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.btnLayTuHoaDonMua.UseVisualStyleBackColor = false;
+            // 
             // frmEditImportStockMaster
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(880, 565);
+            this.Controls.Add(this.btnLayTuHoaDonMua);
             this.Controls.Add(this.lblSupplierName);
             this.Controls.Add(this.btnChooseSupplier);
             this.Controls.Add(this.txtSupplierId);
@@ -331,5 +345,6 @@
         private System.Windows.Forms.Button btnChooseSupplier;
         private System.Windows.Forms.TextBox txtSupplierId;
         private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.Button btnLayTuHoaDonMua;
     }
 }

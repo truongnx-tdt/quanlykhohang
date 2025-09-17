@@ -12,12 +12,12 @@ namespace PMQuanLyHangTonKho.Views.muaban
     public partial class frmEditBangGia : Form
     {
         string strQueryDetail =
-            "SELECT a.ProductsId, b.Name AS ProductsName, " +
+            "SELECT a.ProductId, b.Name AS ProductsName, " +
             "CONVERT(VARCHAR, a.FromQty) AS FromQty, " +
             "CONVERT(VARCHAR, a.ToQty) AS ToQty, " +
             "CONVERT(VARCHAR, a.UnitPrice) AS UnitPrice, " +
-            "a.Note " +
-            "FROM PriceListDetail a INNER JOIN Products b ON a.ProductsId = b.Id";
+            "a.Notes " +
+            "FROM PriceListDetail a INNER JOIN Products b ON a.ProductId = b.Id";
 
         string[] columnsNameDetail = new string[]
         { "Mã sản phẩm", "Tên sản phẩm", "Từ SL", "Đến SL", "Đơn giá", "Ghi chú" };
@@ -54,7 +54,9 @@ namespace PMQuanLyHangTonKho.Views.muaban
         {
             txtId.DataBindings.Add("Text", binSource, "Id");
             txtName.DataBindings.Add("Text", binSource, "Name");
-            txtType.DataBindings.Add("Text", binSource, "Type");          // 'P' or 'S'
+            cboType.DataBindings.Clear();
+            cboType.DataBindings.Add("SelectedValue", binSource, "Type",
+                                     true, DataSourceUpdateMode.Never);
             dtpStartDate.DataBindings.Add("Text", binSource, "StartDate");
             dtpEndDate.DataBindings.Add("Text", binSource, "EndDate");
             chkActive.DataBindings.Add("Checked", binSource, "IsActive");
@@ -68,22 +70,29 @@ namespace PMQuanLyHangTonKho.Views.muaban
             {
                 txtId.Text = DLLSystem.GenCode("BG");
                 chkActive.Checked = true;
-                if (string.IsNullOrWhiteSpace(txtType.Text)) txtType.Text = "S"; // mặc định bảng giá bán
+                if (cboType.SelectedValue == null || string.IsNullOrWhiteSpace(cboType.SelectedValue.ToString()))
+                    cboType.SelectedValue = "S";
             }
             else if (frmBangGia.isCopy)
             {
                 txtId.Text = DLLSystem.GenCode("BG");
             }
 
-            // Nạp detail
             string key = " WHERE PriceListId = '" + txtId.Text + "'";
             Lib.CssDatagridview.LoadDataDetailVoucher(dtgvDetail, strQueryDetail + key, columnsNameDetail, widthDetail, out dtDetail);
 
-            // Khóa cột tên hàng - tự fill theo ProductsId
             dtgvDetail.Columns["ProductsName"].ReadOnly = true;
 
-            // Nếu bạn dùng combobox cho Type, có thể set sẵn list P/S (ở Designer)
-            // Nếu dùng TextBox thì giữ như hiện tại (txtType).
+            var dtType = new DataTable();
+            dtType.Columns.Add("Value", typeof(string));
+            dtType.Columns.Add("Text", typeof(string));
+            dtType.Rows.Add("P", "Mua");
+            dtType.Rows.Add("S", "Bán");
+
+            cboType.DisplayMember = "Text";
+            cboType.ValueMember = "Value";
+            cboType.DataSource = dtType;
+            cboType.DropDownStyle = ComboBoxStyle.DropDownList;
         }
 
         // ====== LƯU ======
@@ -96,31 +105,34 @@ namespace PMQuanLyHangTonKho.Views.muaban
                 txtName.Focus();
                 return;
             }
-            if (txtType.Text != "P" && txtType.Text != "S")
+
+            var typeVal = (cboType.SelectedValue ?? "").ToString();
+            if (typeVal != "P" && typeVal != "S")
             {
                 Alert.Error("Loại bảng giá phải là 'P' (Mua) hoặc 'S' (Bán).");
-                txtType.Focus();
+                cboType.Focus();
                 return;
             }
 
-            // Làm sạch detail: bỏ dòng trống hoặc sai mã hàng
             for (int i = dtgvDetail.Rows.Count - 1; i >= 0; i--)
             {
                 var r = dtgvDetail.Rows[i];
-                var prod = r.Cells["ProductsId"].Value;
+                var prod = r.Cells["ProductId"].Value;
                 var from = r.Cells["FromQty"].Value;
                 var price = r.Cells["UnitPrice"].Value;
 
-                bool emptyRow = (prod == null || string.IsNullOrWhiteSpace(prod.ToString()))
-                                && (from == null || string.IsNullOrWhiteSpace(from.ToString()))
-                                && (price == null || string.IsNullOrWhiteSpace(price.ToString()));
+                bool isProdEmpty = prod == null || string.IsNullOrWhiteSpace(prod.ToString());
+                bool isFromEmpty = from == null || from == DBNull.Value || from.ToString() == "" || Convert.ToDecimal(from) == 0;
+                bool isPriceEmpty = price == null || price == DBNull.Value || price.ToString() == "" || Convert.ToDecimal(price) == 0;
+
+                bool emptyRow = isProdEmpty || isFromEmpty || isPriceEmpty;
+
                 if (emptyRow)
                 {
                     dtgvDetail.Rows.RemoveAt(i);
                     continue;
                 }
 
-                // Xóa dòng thiếu mã hoặc không tồn tại trong Products
                 if (prod == null || string.IsNullOrWhiteSpace(prod.ToString()))
                 {
                     dtgvDetail.Rows.RemoveAt(i);
@@ -134,13 +146,12 @@ namespace PMQuanLyHangTonKho.Views.muaban
                 }
             }
 
-            // Check có chi tiết chưa (có thể cho phép rỗng nếu bạn muốn tạo trước)
             if (dtgvDetail.Rows.Count == 0)
             {
-                if (!Alert.QuestionYesNo("Bảng giá chưa có dòng. Bạn vẫn muốn lưu?")) return;
+                Alert.Question("Bảng giá chưa có dòng. Bạn vẫn muốn lưu?", out bool isOk);
+                if (!isOk) return;
             }
 
-            // Lưu header (dùng SQL trực tiếp cho chắc chắn)
             if (frmBangGia.isSave || frmBangGia.isCopy)
             {
                 // INSERT
@@ -149,14 +160,14 @@ namespace PMQuanLyHangTonKho.Views.muaban
                       VALUES(@Id, @Name, @Type, @Start, @End, @Active, @Notes, GETDATE(), @User)";
                 Models.SQL.RunQuery(sqlIns, new object[,]
                 {
-                    {"@Id", txtId.Text.Trim()},
-                    {"@Name", txtName.Text.Trim()},
-                    {"@Type", txtType.Text.Trim()},
-                    {"@Start", dtpStartDate.Checked ? (object)dtpStartDate.Value.Date : DBNull.Value},
-                    {"@End", dtpEndDate.Checked ? (object)dtpEndDate.Value.Date : DBNull.Value},
+                    {"@Id",     txtId.Text.Trim()},
+                    {"@Name",   txtName.Text.Trim()},
+                    {"@Type",   (cboType.SelectedValue ?? "S").ToString()},
+                    {"@Start",  dtpStartDate.Checked ? (object)dtpStartDate.Value.Date : DBNull.Value},
+                    {"@End",    dtpEndDate.Checked   ? (object)dtpEndDate.Value.Date   : DBNull.Value},
                     {"@Active", chkActive.Checked ? 1 : 0},
-                    {"@Notes", txtNote.Text.Trim()},
-                    {"@User", DLLSystem.UserName}
+                    {"@Notes",  txtNote.Text.Trim()},
+                    {"@User",   frmLogin.UserName}
                 });
             }
             else
@@ -171,25 +182,46 @@ namespace PMQuanLyHangTonKho.Views.muaban
                 {
                     {"@Id", txtId.Text.Trim()},
                     {"@Name", txtName.Text.Trim()},
-                    {"@Type", txtType.Text.Trim()},
+                    {"@Type",   (cboType.SelectedValue ?? "S").ToString()},
                     {"@Start", dtpStartDate.Checked ? (object)dtpStartDate.Value.Date : DBNull.Value},
                     {"@End", dtpEndDate.Checked ? (object)dtpEndDate.Value.Date : DBNull.Value},
                     {"@Active", chkActive.Checked ? 1 : 0},
                     {"@Notes", txtNote.Text.Trim()},
-                    {"@User", DLLSystem.UserName}
+                    {"@User", frmLogin.UserName}
                 });
 
-                // Xóa detail cũ để ghi lại (đơn giản, đúng với SaveOrUpdateDetail style)
                 Models.SQL.RunQuery("DELETE FROM PriceListDetail WHERE PriceListId=@Id", new object[,] { { "@Id", txtId.Text.Trim() } });
             }
+            // INSERT DETAIL
+            foreach (DataGridViewRow r in dtgvDetail.Rows)
+            {
+                var prod = r.Cells["ProductId"].Value;
+                var from = r.Cells["FromQty"].Value;
+                var price = r.Cells["UnitPrice"].Value;
+                if (prod == null || string.IsNullOrWhiteSpace(prod.ToString())) continue;
+                bool exists = Models.SQL.FindExists("SELECT Id FROM Products WHERE Id = '" + prod.ToString() + "'");
+                if (!exists) continue;
+                decimal fromVal = 0, toVal = 0, priceVal = 0;
+                try { fromVal = Convert.ToDecimal((from ?? "0").ToString().Replace(",", "").Trim()); } catch { }
+                try { toVal = Convert.ToDecimal((r.Cells["ToQty"].Value ?? "0").ToString().Replace(",", "").Trim()); } catch { }
+                try { priceVal = Convert.ToDecimal((price ?? "0").ToString().Replace(",", "").Trim()); } catch { }
+                string sqlInsD =
+                    @"INSERT INTO PriceListDetail(Id, PriceListId, ProductId, FromQty, ToQty, UnitPrice, Notes)
+                      VALUES(@Id, @PriceListId, @ProductId, @FromQty, @ToQty, @UnitPrice, @Notes)";
+                Models.SQL.RunQuery(sqlInsD, new object[,]
+                {
+                    {"@Id",           Guid.NewGuid().ToString()},
+                    {"@PriceListId", txtId.Text.Trim()},
+                    {"@ProductId",   prod.ToString().Trim()},
+                    {"@FromQty",     fromVal},
+                    {"@ToQty",       toVal},
+                    {"@UnitPrice",   priceVal},
+                    {"@Notes",       (r.Cells["Notes"].Value ?? "").ToString().Trim()}
+                });
+            }
 
-            // Lưu detail: tận dụng helper giống phiếu nhập/xuất
-            // Grid phải có các cột đúng tên trường DB: ProductsId, FromQty, ToQty, UnitPrice, Note
-            ListEdit.SaveOrUpdateDetail(dtgvDetail, "PriceListDetail", "PriceListId", txtId.Text.Trim());
-
-            // Thông báo cho list reload
             frmBangGia.isLoad = true;
-            Alert.Success("Đã lưu bảng giá.");
+            Alert.Infor("Đã lưu bảng giá.");
             this.Close();
         }
 
@@ -198,15 +230,15 @@ namespace PMQuanLyHangTonKho.Views.muaban
         {
             var col = dtgvDetail.Columns[e.ColumnIndex].Name;
 
-            if (col == "ProductsId")
+            if (col == "ProductId")
             {
-                string input = (dtgvDetail.Rows[e.RowIndex].Cells["ProductsId"].Value ?? "").ToString();
+                string input = (dtgvDetail.Rows[e.RowIndex].Cells["ProductId"].Value ?? "").ToString();
                 string KeySearch = " WHERE Id LIKE N'%" + input + "%' OR Name LIKE N'%" + input + "%'";
 
                 string outId, outName;
                 Lookup.SearchLookupSingle(strQueryProduct, columnsProductText, widthProduct, input, out outId, out outName, KeySearch);
 
-                dtgvDetail.Rows[e.RowIndex].Cells["ProductsId"].Value = outId;
+                dtgvDetail.Rows[e.RowIndex].Cells["ProductId"].Value = outId;
                 dtgvDetail.Rows[e.RowIndex].Cells["ProductsName"].Value = outName;
             }
             else if (col == "FromQty" || col == "ToQty" || col == "UnitPrice")

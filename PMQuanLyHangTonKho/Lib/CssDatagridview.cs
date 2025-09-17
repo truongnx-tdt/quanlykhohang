@@ -26,7 +26,7 @@ namespace PMQuanLyHangTonKho.Lib
             dgvMain.BackgroundColor = Color.White;
             dgvMain.BorderStyle = BorderStyle.Fixed3D;
         }
-        public static void LoadData(BindingSource binSource, DataGridView dgvMain, string strQuery, string[] columns, int[] width, Boolean isColumns = false, Boolean isReadOnly = true,string KeySearch = null)
+        public static void LoadData(BindingSource binSource, DataGridView dgvMain, string strQuery, string[] columns, int[] width, Boolean isColumns = false, Boolean isReadOnly = true, string KeySearch = null)
         {
             DataTable dt = new DataTable();
             dt = Models.SQL.GetData(KeySearch != null ? strQuery + KeySearch : strQuery);
@@ -49,11 +49,15 @@ namespace PMQuanLyHangTonKho.Lib
                 {
                     dgvMain.Columns[i].Width = width[i];
                 }
+                if (dgvMain.Columns.Contains("Type"))
+                    dgvMain.Columns["Type"].Visible = false;
+                if (dgvMain.Columns.Contains("IsActive"))
+                    dgvMain.Columns["IsActive"].Visible = false;
             }
             StyleDatagridview(dgvMain, isReadOnly);
             dt.Dispose();
         }
-        public static void LoadDataDetailVoucher(DataGridView dgvMain, string strQuery, string[] columns, int[] width,out DataTable dt)
+        public static void LoadDataDetailVoucher(DataGridView dgvMain, string strQuery, string[] columns, int[] width, out DataTable dt)
         {
             dt = new DataTable();
             dt = Models.SQL.GetData(strQuery);

@@ -18,8 +18,8 @@ namespace PMQuanLyHangTonKho
     {
         string strQueryMaster = "SELECT * FROM ImportStockMaster";
         string strQueryDetail = "SELECT ImportStockMasterId,ProductsId,b.Name,b.Unit,Amount,Price,TotalMoney,Note FROM ImportStockDetail a INNER JOIN Products b ON a.ProductsId = b.Id";
-        string[] columnsNameMaster = new string[] { "Mã phiếu", "Ngày nhập", "Nhập vào kho","Nhà cung cấp", "Ghi chú","Tổng tiền","Tổng số lượng", "Người tạo", "Ngày tạo", "Người sửa", "Ngày sửa" };
-        int[] widthMaster = new int[] { 120, 120, 120,120,250,120,120, 120, 120,120,120 };
+        string[] columnsNameMaster = new string[] { "Mã phiếu", "Ngày nhập", "Nhập vào kho","Nhà cung cấp", "Ghi chú","Tổng số lượng", "Tổng tiền", "Người tạo", "Ngày tạo", "Người sửa", "Ngày sửa", "Mã Hóa Đơn" };
+        int[] widthMaster = new int[] { 120, 120, 120,120,250,120,120, 120, 120,120,120, 120 };
         string[] columnsNameDetail = new string[] { "Mã phiếu", "Mã sản phẩm", "Tên sản phẩm","Đvt", "Số lượng", "Giá xuất", "Tổng tiền", "Ghi chú"};
         int[] widthDetail = new int[] { 120, 120, 250,100,120, 120, 120,250 };
 

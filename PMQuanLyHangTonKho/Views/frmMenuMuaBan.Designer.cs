@@ -125,6 +125,7 @@
             this.menuHoaDonMua.TabIndex = 10;
             this.menuHoaDonMua.Text = "Hóa đơn mua";
             this.menuHoaDonMua.TextAlign = System.Windows.Forms.HorizontalAlignment.Left;
+            this.menuHoaDonMua.Click += new System.EventHandler(this.menuHoaDonMua_Click);
             // 
             // menuTraHangMua
             // 

@@ -28,20 +28,23 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmBangGia));
             this.menuStrip = new System.Windows.Forms.MenuStrip();
             this.menuThem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSua = new System.Windows.Forms.ToolStripMenuItem();
             this.menuXoa = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuXuatExcel = new System.Windows.Forms.ToolStripMenuItem();
             this.menuLamMoi = new System.Windows.Forms.ToolStripMenuItem();
             this.menuThoat = new System.Windows.Forms.ToolStripMenuItem();
             this.menuTimKiem = new System.Windows.Forms.ToolStripMenuItem();
             this.dtgvMaster = new System.Windows.Forms.DataGridView();
             this.dtgvDetail = new System.Windows.Forms.DataGridView();
-            this.menuXuatExcel = new System.Windows.Forms.ToolStripMenuItem();
+            this.binSource = new System.Windows.Forms.BindingSource(this.components);
             this.menuStrip.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dtgvMaster)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dtgvDetail)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.binSource)).BeginInit();
             this.SuspendLayout();
             // 
             // menuStrip
@@ -84,6 +87,13 @@
             this.menuXoa.Size = new System.Drawing.Size(57, 20);
             this.menuXoa.Text = "Xóa";
             this.menuXoa.Click += new System.EventHandler(this.menuXoa_Click);
+            // 
+            // menuXuatExcel
+            // 
+            this.menuXuatExcel.Image = ((System.Drawing.Image)(resources.GetObject("menuXuatExcel.Image")));
+            this.menuXuatExcel.Name = "menuXuatExcel";
+            this.menuXuatExcel.Size = new System.Drawing.Size(94, 20);
+            this.menuXuatExcel.Text = "Xuất Excel";
             // 
             // menuLamMoi
             // 
@@ -129,13 +139,6 @@
             this.dtgvDetail.Size = new System.Drawing.Size(1063, 326);
             this.dtgvDetail.TabIndex = 440;
             // 
-            // menuXuatExcel
-            // 
-            this.menuXuatExcel.Image = ((System.Drawing.Image)(resources.GetObject("menuXuatExcel.Image")));
-            this.menuXuatExcel.Name = "menuXuatExcel";
-            this.menuXuatExcel.Size = new System.Drawing.Size(94, 20);
-            this.menuXuatExcel.Text = "Xuất Excel";
-            // 
             // frmBangGia
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -150,6 +153,7 @@
             this.menuStrip.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dtgvMaster)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.dtgvDetail)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.binSource)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -166,7 +170,7 @@
         private System.Windows.Forms.ToolStripMenuItem menuTimKiem;
         private System.Windows.Forms.DataGridView dtgvMaster;
         private System.Windows.Forms.DataGridView dtgvDetail;
-        private System.Windows.Forms.BindingSource binSource;
         private System.Windows.Forms.ToolStripMenuItem menuXuatExcel;
+        private System.Windows.Forms.BindingSource binSource;
     }
 }
