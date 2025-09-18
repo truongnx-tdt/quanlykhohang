@@ -236,11 +236,23 @@
     <Compile Include="Views\muaban\frmEditBangGia.Designer.cs">
       <DependentUpon>frmEditBangGia.cs</DependentUpon>
     </Compile>
+    <Compile Include="Views\muaban\frmEditHoaDonBan.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\muaban\frmEditHoaDonBan.Designer.cs">
+      <DependentUpon>frmEditHoaDonBan.cs</DependentUpon>
+    </Compile>
     <Compile Include="Views\muaban\frmEditHoaDonMua.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Views\muaban\frmEditHoaDonMua.Designer.cs">
       <DependentUpon>frmEditHoaDonMua.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\muaban\frmHoaDonBan.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\muaban\frmHoaDonBan.Designer.cs">
+      <DependentUpon>frmHoaDonBan.cs</DependentUpon>
     </Compile>
     <Compile Include="Views\muaban\frmHoaDonMua.cs">
       <SubType>Form</SubType>
@@ -437,8 +449,14 @@
     <EmbeddedResource Include="Views\muaban\frmEditBangGia.resx">
       <DependentUpon>frmEditBangGia.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Views\muaban\frmEditHoaDonBan.resx">
+      <DependentUpon>frmEditHoaDonBan.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Views\muaban\frmEditHoaDonMua.resx">
       <DependentUpon>frmEditHoaDonMua.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Views\muaban\frmHoaDonBan.resx">
+      <DependentUpon>frmHoaDonBan.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Views\muaban\frmHoaDonMua.resx">
       <DependentUpon>frmHoaDonMua.cs</DependentUpon>

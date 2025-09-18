@@ -46,6 +46,7 @@
             this.label2 = new System.Windows.Forms.Label();
             this.txtId = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.btnLayTuHoaDonBan = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dtgvDetail)).BeginInit();
             this.SuspendLayout();
@@ -230,11 +231,25 @@
             this.label1.TabIndex = 447;
             this.label1.Text = "Mã phiếu xuất";
             // 
+            // btnLayTuHoaDonBan
+            // 
+            this.btnLayTuHoaDonBan.BackColor = System.Drawing.SystemColors.Control;
+            this.btnLayTuHoaDonBan.Font = new System.Drawing.Font("Tahoma", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnLayTuHoaDonBan.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnLayTuHoaDonBan.Location = new System.Drawing.Point(557, 524);
+            this.btnLayTuHoaDonBan.Name = "btnLayTuHoaDonBan";
+            this.btnLayTuHoaDonBan.Size = new System.Drawing.Size(125, 35);
+            this.btnLayTuHoaDonBan.TabIndex = 464;
+            this.btnLayTuHoaDonBan.Text = "Lấy dữ liệu từ HDB";
+            this.btnLayTuHoaDonBan.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.btnLayTuHoaDonBan.UseVisualStyleBackColor = false;
+            // 
             // frmEditExportStockMaster
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(880, 565);
+            this.Controls.Add(this.btnLayTuHoaDonBan);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.txtTotalAmount);
             this.Controls.Add(this.label4);
@@ -280,5 +295,6 @@
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TextBox txtId;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Button btnLayTuHoaDonBan;
     }
 }
