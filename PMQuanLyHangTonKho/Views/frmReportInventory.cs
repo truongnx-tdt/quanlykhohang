@@ -15,6 +15,11 @@ namespace PMQuanLyHangTonKho.Views
 {
     public partial class frmReportInventory: Form
     {
+        // Lookup kho
+        string strQueryWare = "SELECT CAST(0 AS BIT) AS xtag, Id, Name FROM Warehouse";
+        string[] columnsWareText = new[] { "Chọn", "Mã kho", "Tên kho" };
+        int[] widthWare = new[] { 60, 120, 250 };
+
         string[] columnsValues = new string[] { "STT", "ProductsName", "Amount"};
         string[] columnsName = new string[] { "STT", "Tên sản phẩm", "Số lượng tồn"};
         int[] width = new int[] { 60, 250, 180};
@@ -29,7 +34,22 @@ namespace PMQuanLyHangTonKho.Views
             btnFind.Click += bntFind_Click;
             btnXuatExcel.Click += btnXuatExcel_Click;
             btnIn.Click += btnIn_Click;
+            // giả sử bạn đã có 3 control: txtWarehouseId, lblWarehouseName, btnChooseWarehouse
+            this.btnChooseWarehouse.Click += btnChooseWarehouse_Click;
+
         }
+
+        private void btnChooseWarehouse_Click(object sender, EventArgs e)
+        {
+            string outId, outName;
+            Lookup.SearchLookupSingle(strQueryWare, columnsWareText, widthWare,
+                                      txtWarehouseId.Text, out outId, out outName);
+            txtWarehouseId.Text = outId;
+            lblWarehouseName.Text = outName;
+            LoadData();
+        }
+
+
 
         private void btnIn_Click(object sender, EventArgs e)
         {
@@ -49,9 +69,21 @@ namespace PMQuanLyHangTonKho.Views
 
         private void LoadData()
         {
-            string strQuery = "SELECT b.Name as ProductsName,SUM(Amount) as Amount INTO #t FROM PostData a INNER JOIN Products b ON a.ProductsId = b.Id WHERE VoucherDate BETWEEN '" + dtpFrom.Value.ToString("yyyyMMdd")+"' AND '"+dtpTo.Value.ToString("yyyyMMdd") + "' GROUP BY b.Name ";
-            strQuery += " SELECT ROW_NUMBER() OVER (ORDER BY ProductsName) AS STT,* FROM #t";
+            var from = dtpFrom.Value.ToString("yyyyMMdd");
+            var to = dtpTo.Value.ToString("yyyyMMdd");
+            var wh = (txtWarehouseId.Text ?? "").Trim().Replace("'", "''");
+
+            string strQuery =
+                "SELECT b.Name AS ProductsName, SUM(a.Amount) AS Amount INTO #t " +
+                "FROM PostData a " +
+                "INNER JOIN Products b ON a.ProductsId = b.Id " +
+                $"WHERE a.VoucherDate BETWEEN '{from}' AND '{to}' " +
+                (string.IsNullOrEmpty(wh) ? "" : $"AND a.WarehouseId = '{wh}' ") +
+                "GROUP BY b.Name; " +
+                "SELECT ROW_NUMBER() OVER (ORDER BY ProductsName) AS STT, * FROM #t";
+
             Lib.CssDatagridview.LoadData(null, dtgvMain, strQuery, columnsName, width);
         }
+
     }
 }

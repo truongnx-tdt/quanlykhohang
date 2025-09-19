@@ -12,11 +12,11 @@ using PMQuanLyHangTonKho.Views.Reports;
 
 namespace PMQuanLyHangTonKho.Views
 {
-    public partial class frmExportStockMaster: Form
+    public partial class frmExportStockMaster : Form
     {
         string strQueryMaster = "SELECT * FROM ExportStockMaster";
         string strQueryDetail = "SELECT ExportStockMasterId,ProductsId,b.Name,Amount,Price,TotalMoney,Note FROM ExportStockDetail a INNER JOIN Products b ON a.ProductsId = b.Id";
-        string[] columnsNameMaster = new string[] { "Mã phiếu", "Ngày xuất", "Khách hàng", "Ghi chú", "Tổng tiền", "Tổng số lượng", "Người tạo", "Ngày tạo", "Người sửa", "Ngày sửa" };
+        string[] columnsNameMaster = new string[] { "Mã phiếu", "Ngày xuất", "Khách hàng", "Ghi chú", "Tổng số lượng", "Tổng tiền", "Người tạo", "Ngày tạo", "Người sửa", "Ngày sửa", "Mã hóa đơn" };
         int[] widthMaster = new int[] { 120, 120, 120, 250, 120, 120, 120, 120, 120, 120 };
         string[] columnsNameDetail = new string[] { "Mã phiếu", "Mã sản phẩm", "Tên sản phẩm", "Số lượng", "Giá nhập", "Tổng tiền", "Ghi chú" };
         int[] widthDetail = new int[] { 120, 120, 250, 120, 120, 120, 250 };

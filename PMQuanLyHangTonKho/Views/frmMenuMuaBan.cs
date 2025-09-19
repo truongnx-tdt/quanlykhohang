@@ -38,7 +38,8 @@ namespace PMQuanLyHangTonKho.Views
 
         private void menuBaoCao_Click(object sender, EventArgs e)
         {
-
+            frmBaoCao frm = new frmBaoCao();
+            frm.ShowDialog();
         }
     }
 }

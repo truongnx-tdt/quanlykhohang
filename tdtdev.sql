@@ -39,6 +39,25 @@ BEGIN
 END
 GO
 
+-- 1) Tìm tên FK đang chặn
+SELECT fk.name AS FKName
+FROM sys.foreign_keys fk
+JOIN sys.tables t_parent ON fk.referenced_object_id = t_parent.object_id
+JOIN sys.tables t_child  ON fk.parent_object_id     = t_child.object_id
+WHERE t_parent.name = 'PriceListMaster'
+  AND t_child.name  = 'PriceListDetail';
+
+-- Giả sử kết quả là: FK__PriceList__Price__6FE99F9F
+-- 2) Drop FK cũ
+ALTER TABLE dbo.PriceListDetail
+DROP CONSTRAINT [FK__PriceList__Price__6FE99F9F];
+
+-- 3) Tạo lại FK có ON DELETE CASCADE
+ALTER TABLE dbo.PriceListDetail
+ADD CONSTRAINT FK_PriceListDetail_PriceListMaster
+    FOREIGN KEY (PriceListId)
+    REFERENCES dbo.PriceListMaster(Id)
+    ON DELETE CASCADE;
 
 /* =========================================================
    2) HÓA ĐƠN MUA / BÁN (không tác động kho trực tiếp)
@@ -137,148 +156,34 @@ IF COL_LENGTH('ExportStockMaster', 'SalesInvoiceId') IS NULL
     ALTER TABLE ExportStockMaster ADD SalesInvoiceId VARCHAR(32) NULL 
         CONSTRAINT FK_ExportStock_SIMaster REFERENCES SalesInvoiceMaster(Id);
 GO
+ALTER TABLE ExportStockDetail ADD SalesInvoiceDetailId VARCHAR(64) NULL;
 
+go 
+ALTER TABLE ImportStockDetail ADD PurchaseInvoiceDetailId VARCHAR(64) NULL;
+-- (khuyến nghị) tăng tốc các truy vấn kiểm tra:
+CREATE NONCLUSTERED INDEX IX_ImportStockDetail_PIDetail
+ON ImportStockDetail (PurchaseInvoiceDetailId);
 
-/* =========================================================
-   4) HÀNG TRẢ LẠI (mua/bán)
-   ========================================================= */
-IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'PurchaseReturnMaster')
-BEGIN
-    CREATE TABLE PurchaseReturnMaster(
-        Id              VARCHAR(32) PRIMARY KEY NOT NULL,
-        DocNo           NVARCHAR(32) NULL,
-        DocDate         DATETIME NOT NULL,
-        SupplierId      VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES Supplier(Id),
-        WarehouseId     VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES Warehouse(Id),
-        RefPIMasterId   VARCHAR(32) NULL FOREIGN KEY REFERENCES PurchaseInvoiceMaster(Id),
-        Status          TINYINT NOT NULL DEFAULT(0),
-        TotalQty        DECIMAL(18,3) NULL,
-        TotalMoney      DECIMAL(18,2) NULL,
-        Notes           NVARCHAR(256) NULL,
-        UserCreate      NVARCHAR(128) NULL,
-        DateCreate      DATETIME NULL DEFAULT(GETDATE()),
-        UserUpdate      NVARCHAR(128) NULL,
-        DateUpdate      DATETIME NULL
-    );
-END
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'PurchaseReturnDetail')
-BEGIN
-    CREATE TABLE PurchaseReturnDetail(
-        Id              VARCHAR(64) PRIMARY KEY NOT NULL,
-        PRMasterId      VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES PurchaseReturnMaster(Id),
-        ProductId       VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES Products(Id),
-        Qty             DECIMAL(18,3) NOT NULL,
-        UnitPrice       DECIMAL(18,2) NOT NULL,
-        LineAmount      DECIMAL(18,2) NOT NULL,
-        Notes           NVARCHAR(256) NULL
-    );
-    CREATE INDEX IX_PurchaseReturnDetail_Master ON PurchaseReturnDetail(PRMasterId);
-END
-GO
+go
+-- PXK cần kho
+IF COL_LENGTH('dbo.ExportStockMaster','WarehouseId') IS NULL
+    ALTER TABLE dbo.ExportStockMaster ADD WarehouseId VARCHAR(64) NULL;
 
-IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'SalesReturnMaster')
-BEGIN
-    CREATE TABLE SalesReturnMaster(
-        Id              VARCHAR(32) PRIMARY KEY NOT NULL,
-        DocNo           NVARCHAR(32) NULL,
-        DocDate         DATETIME NOT NULL,
-        CustomerId      VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES Customer(Id),
-        WarehouseId     VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES Warehouse(Id),
-        RefSIMasterId   VARCHAR(32) NULL FOREIGN KEY REFERENCES SalesInvoiceMaster(Id),
-        Status          TINYINT NOT NULL DEFAULT(0),
-        TotalQty        DECIMAL(18,3) NULL,
-        TotalMoney      DECIMAL(18,2) NULL,
-        Notes           NVARCHAR(256) NULL,
-        UserCreate      NVARCHAR(128) NULL,
-        DateCreate      DATETIME NULL DEFAULT(GETDATE()),
-        UserUpdate      NVARCHAR(128) NULL,
-        DateUpdate      DATETIME NULL
-    );
-END
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'SalesReturnDetail')
-BEGIN
-    CREATE TABLE SalesReturnDetail(
-        Id              VARCHAR(64) PRIMARY KEY NOT NULL,
-        SRMasterId      VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES SalesReturnMaster(Id),
-        ProductId       VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES Products(Id),
-        Qty             DECIMAL(18,3) NOT NULL,
-        UnitPrice       DECIMAL(18,2) NOT NULL,
-        LineAmount      DECIMAL(18,2) NOT NULL,
-        Notes           NVARCHAR(256) NULL
-    );
-    CREATE INDEX IX_SalesReturnDetail_Master ON SalesReturnDetail(SRMasterId);
-END
-GO
+-- PostData cần kho để tổng hợp tồn theo kho
+IF COL_LENGTH('dbo.PostData','WarehouseId') IS NULL
+    ALTER TABLE dbo.PostData ADD WarehouseId VARCHAR(64) NULL;
 
+-- backfill cho các phiếu đã post trước đây
+UPDATE p
+SET p.WarehouseId = m.WarehouseId
+FROM dbo.PostData p
+JOIN dbo.ImportStockMaster m ON p.VoucherCode='PNK' AND p.VoucherId=m.Id
+WHERE p.WarehouseId IS NULL;
 
-/* =========================================================
-   5) SỔ KHO CHUẨN + SỐ DƯ ĐẦU KỲ + ĐIỀU CHỈNH (phát sinh từ kiểm kê)
-   ========================================================= */
-IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'StockOpeningBalance')
-BEGIN
-    CREATE TABLE StockOpeningBalance(
-        WarehouseId     VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES Warehouse(Id),
-        ProductId       VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES Products(Id),
-        Period          CHAR(6) NOT NULL,                 -- YYYYMM
-        Qty             DECIMAL(18,3) NOT NULL DEFAULT(0),
-        UnitCost        DECIMAL(18,2) NOT NULL DEFAULT(0),
-        CONSTRAINT PK_StockOpeningBalance PRIMARY KEY (WarehouseId, ProductId, Period)
-    );
-END
-GO
+UPDATE p
+SET p.WarehouseId = m.WarehouseId
+FROM dbo.PostData p
+JOIN dbo.ExportStockMaster m ON p.VoucherCode='PXK' AND p.VoucherId=m.Id
+WHERE p.WarehouseId IS NULL;
 
-IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'StockTransactions')
-BEGIN
-    CREATE TABLE StockTransactions(
-        Id              BIGINT IDENTITY(1,1) PRIMARY KEY,
-        TransDate       DATETIME NOT NULL DEFAULT(GETDATE()),
-        WarehouseId     VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES Warehouse(Id),
-        ProductId       VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES Products(Id),
-        InQty           DECIMAL(18,3) NOT NULL DEFAULT(0),
-        OutQty          DECIMAL(18,3) NOT NULL DEFAULT(0),
-        UnitCost        DECIMAL(18,2) NULL,      -- giá vốn tại thời điểm nhập/xuất
-        Amount          DECIMAL(18,2) NULL,      -- InQty*UnitCost hoặc OutQty*UnitCost
-        RefType         VARCHAR(20) NULL,        -- 'GRN','PI','DLY','SI','ADJ+','ADJ-','RET+','RET-'...
-        RefId           VARCHAR(32) NULL,
-        RefNo           NVARCHAR(32) NULL,
-        RefLineId       VARCHAR(64) NULL,
-        CreatedAt       DATETIME NOT NULL DEFAULT(GETDATE())
-    );
-    CREATE INDEX IX_StockTrans_Warehouse_Product ON StockTransactions(WarehouseId, ProductId, TransDate);
-END
-GO
-
--- Phiếu điều chỉnh sinh từ chênh lệch kiểm kê (TakingStock)
-IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'StockAdjustMaster')
-BEGIN
-    CREATE TABLE StockAdjustMaster(
-        Id              VARCHAR(32) PRIMARY KEY NOT NULL,
-        DocNo           NVARCHAR(32) NULL,
-        DocDate         DATETIME NOT NULL,
-        WarehouseId     VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES Warehouse(Id),
-        Status          TINYINT NOT NULL DEFAULT(0),
-        Notes           NVARCHAR(256) NULL,
-        UserCreate      NVARCHAR(128) NULL,
-        DateCreate      DATETIME NULL DEFAULT(GETDATE()),
-        UserUpdate      NVARCHAR(128) NULL,
-        DateUpdate      DATETIME NULL
-    );
-END
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'StockAdjustDetail')
-BEGIN
-    CREATE TABLE StockAdjustDetail(
-        Id              VARCHAR(64) PRIMARY KEY NOT NULL,
-        AdjustId        VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES StockAdjustMaster(Id),
-        ProductId       VARCHAR(32) NOT NULL FOREIGN KEY REFERENCES Products(Id),
-        DiffQty         DECIMAL(18,3) NOT NULL,      -- + thừa, - thiếu
-        UnitCost        DECIMAL(18,2) NULL,
-        Notes           NVARCHAR(256) NULL
-    );
-    CREATE INDEX IX_StockAdjustDetail_Adjust ON StockAdjustDetail(AdjustId);
-END
-GO
 

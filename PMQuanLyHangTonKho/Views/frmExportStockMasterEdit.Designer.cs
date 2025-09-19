@@ -47,6 +47,10 @@
             this.txtId = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.btnLayTuHoaDonBan = new System.Windows.Forms.Button();
+            this.lblWarehouseName = new System.Windows.Forms.Label();
+            this.btnChooseWarehouse = new System.Windows.Forms.Button();
+            this.txtWarehouseId = new System.Windows.Forms.TextBox();
+            this.label5 = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dtgvDetail)).BeginInit();
             this.SuspendLayout();
@@ -244,11 +248,53 @@
             this.btnLayTuHoaDonBan.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.btnLayTuHoaDonBan.UseVisualStyleBackColor = false;
             // 
+            // lblWarehouseName
+            // 
+            this.lblWarehouseName.AutoSize = true;
+            this.lblWarehouseName.Font = new System.Drawing.Font("Tahoma", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblWarehouseName.Location = new System.Drawing.Point(683, 34);
+            this.lblWarehouseName.Name = "lblWarehouseName";
+            this.lblWarehouseName.Size = new System.Drawing.Size(53, 14);
+            this.lblWarehouseName.TabIndex = 468;
+            this.lblWarehouseName.Text = "Tên kho";
+            // 
+            // btnChooseWarehouse
+            // 
+            this.btnChooseWarehouse.Location = new System.Drawing.Point(658, 31);
+            this.btnChooseWarehouse.Name = "btnChooseWarehouse";
+            this.btnChooseWarehouse.Size = new System.Drawing.Size(24, 22);
+            this.btnChooseWarehouse.TabIndex = 467;
+            this.btnChooseWarehouse.Text = "...";
+            this.btnChooseWarehouse.UseVisualStyleBackColor = true;
+            // 
+            // txtWarehouseId
+            // 
+            this.txtWarehouseId.Location = new System.Drawing.Point(506, 32);
+            this.txtWarehouseId.Name = "txtWarehouseId";
+            this.txtWarehouseId.ReadOnly = true;
+            this.txtWarehouseId.Size = new System.Drawing.Size(150, 20);
+            this.txtWarehouseId.TabIndex = 466;
+            this.txtWarehouseId.Tag = "txtNB";
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Font = new System.Drawing.Font("Tahoma", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label5.Location = new System.Drawing.Point(391, 36);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(56, 14);
+            this.label5.TabIndex = 465;
+            this.label5.Text = "Kho xuất";
+            // 
             // frmEditExportStockMaster
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(880, 565);
+            this.Controls.Add(this.lblWarehouseName);
+            this.Controls.Add(this.btnChooseWarehouse);
+            this.Controls.Add(this.txtWarehouseId);
+            this.Controls.Add(this.label5);
             this.Controls.Add(this.btnLayTuHoaDonBan);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.txtTotalAmount);
@@ -296,5 +342,9 @@
         private System.Windows.Forms.TextBox txtId;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button btnLayTuHoaDonBan;
+        private System.Windows.Forms.Label lblWarehouseName;
+        private System.Windows.Forms.Button btnChooseWarehouse;
+        private System.Windows.Forms.TextBox txtWarehouseId;
+        private System.Windows.Forms.Label label5;
     }
 }

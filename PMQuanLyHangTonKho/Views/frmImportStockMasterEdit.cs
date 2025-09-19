@@ -1,8 +1,9 @@
-﻿using System;
+﻿using PMQuanLyHangTonKho.Lib;
+using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Windows.Forms;
-using PMQuanLyHangTonKho.Lib;
 
 namespace PMQuanLyHangTonKho.Views
 {
@@ -13,9 +14,11 @@ namespace PMQuanLyHangTonKho.Views
         int[] widthWare = new int[] { 60, 120, 250 };
 
         string strQueryDetail =
-            "SELECT ProductsId,b.Name as ProductsName,CONVERT(VARCHAR, Amount) AS Amount," +
-            "CONVERT(VARCHAR, Price) AS Price,CONVERT(VARCHAR, TotalMoney) AS TotalMoney,Note " +
-            "FROM ImportStockDetail a INNER JOIN Products b ON a.ProductsId = b.Id";
+                "SELECT a.ProductsId, b.Name AS ProductsName," +
+                "CONVERT(VARCHAR, a.Amount) AS Amount, CONVERT(VARCHAR, a.Price) AS Price," +
+                "CONVERT(VARCHAR, a.TotalMoney) AS TotalMoney, a.Note, a.PurchaseInvoiceDetailId " +
+                "FROM ImportStockDetail a INNER JOIN Products b ON a.ProductsId = b.Id";
+
         string[] columnsNameDetail = new string[] { "Mã sản phẩm", "Tên sản phẩm", "Số lượng", "Giá nhập", "Tổng tiền", "Ghi chú" };
         int[] widthDetail = new int[] { 120, 250, 120, 120, 120, 250 };
         DataTable dtDetail = new DataTable();
@@ -29,13 +32,32 @@ namespace PMQuanLyHangTonKho.Views
         string[] columnsSupplierText = new string[] { "Chọn", "Mã ncc", "Tên ncc" };
         int[] widthSupplier = new int[] { 60, 120, 250 };
 
-        // Lookup HĐ mua CHƯA nhập kho
-        string strQueryPIUnreceived =
-            @"SELECT CAST(0 AS BIT) AS xtag, a.Id, a.DocDate, a.SupplierId, a.TotalQty, a.TotalMoney
-              FROM PurchaseInvoiceMaster a
-              WHERE NOT EXISTS (SELECT 1 FROM ImportStockMaster m WHERE m.PurchaseInvoiceId = a.Id)";
-        string[] columnsPIText = new string[] { "Chọn", "Mã HĐ", "Ngày HĐ", "NCC", "Tổng SL", "Tổng tiền" };
-        int[] widthPI = new int[] { 60, 120, 120, 140, 100, 120 };
+        // Chi tiết HĐ mua còn lại chưa nhập (RemainQty > 0)
+        string strQueryPIRemainingDetail = @"
+            SELECT CAST(0 AS BIT) AS xtag,
+                   m.Id  AS PIMasterId, d.Id AS PIDetailId,
+                   m.DocDate, m.SupplierId, s.Name AS SupplierName,
+                   d.ProductId, p.Name AS ProductName,
+                   d.Qty AS QtyOrdered,
+                   (d.Qty - ISNULL(r.ReceivedQty,0)) AS RemainQty,
+                   ISNULL(d.UnitPrice,0) AS UnitPrice
+            FROM PurchaseInvoiceDetail d
+            JOIN PurchaseInvoiceMaster m  ON d.PIMasterId = m.Id
+            JOIN Products p               ON d.ProductId  = p.Id
+            LEFT JOIN Supplier s          ON m.SupplierId = s.Id
+            LEFT JOIN (
+               SELECT PurchaseInvoiceDetailId, SUM(Amount) AS ReceivedQty
+               FROM ImportStockDetail
+               GROUP BY PurchaseInvoiceDetailId
+            ) r ON r.PurchaseInvoiceDetailId = d.Id
+            WHERE (d.Qty - ISNULL(r.ReceivedQty,0)) > 0";
+
+        string[] columnsPIRemainText = {
+            "Chọn","Mã HĐ","Mã dòng","Ngày HĐ","Mã NCC", "Tên NCC",
+            "Mã SP","Tên SP","SL HĐ","Còn lại","Đơn giá"
+        };
+        int[] widthPIRemain = { 60, 120, 120, 110, 120, 140, 120, 240, 90, 90, 110 };
+
 
         // Lưu lại HĐ mua đã chọn (không cần control ẩn)
         string _selectedPIId = null;
@@ -83,6 +105,32 @@ namespace PMQuanLyHangTonKho.Views
 
             string key = " WHERE ImportStockMasterId = '" + txtId.Text + "'";
             Lib.CssDatagridview.LoadDataDetailVoucher(dtgvDetail, strQueryDetail + key, columnsNameDetail, widthDetail, out dtDetail);
+
+            if (!dtDetail.Columns.Contains("PurchaseInvoiceDetailId"))
+                dtDetail.Columns.Add("PurchaseInvoiceDetailId", typeof(string));
+
+            // Ẩn cột trên lưới (AutoGenerateColumns = true)
+            if (dtgvDetail.Columns.Contains("PurchaseInvoiceDetailId"))
+                dtgvDetail.Columns["PurchaseInvoiceDetailId"].Visible = false;
+
+            // Nếu mở phiếu đã lưu, map lại PIDetail vào dtDetail để lần sau lookup tự loại bỏ
+            var dtMap = Models.SQL.GetData(@"
+            SELECT ProductsId,
+                   CONVERT(VARCHAR, Amount) AS Amount,
+                   CONVERT(VARCHAR, Price)  AS Price,
+                   PurchaseInvoiceDetailId
+            FROM ImportStockDetail
+            WHERE ImportStockMasterId = '" + txtId.Text + "'");
+
+            foreach (DataRow m in dtMap.Rows)
+            {
+                var found = dtDetail.Select(
+                    $"ProductsId = '{m["ProductsId"]}' AND Amount = '{m["Amount"]}' AND Price = '{m["Price"]}'");
+                if (found.Length > 0)
+                    found[0]["PurchaseInvoiceDetailId"] =
+                        m["PurchaseInvoiceDetailId"] == DBNull.Value ? null : m["PurchaseInvoiceDetailId"].ToString();
+            }
+
             dtgvDetail.Columns["ProductsName"].ReadOnly = true;
             dtgvDetail.Columns["TotalMoney"].ReadOnly = true;
 
@@ -116,64 +164,92 @@ namespace PMQuanLyHangTonKho.Views
         }
 
         // ====== LẤY TỪ HÓA ĐƠN MUA ======
+        private string BuildExcludeWhereFromGrid()
+        {
+            var ids = new List<string>();
+            foreach (DataRow r in dtDetail.Rows)
+            {
+                if (r.RowState == DataRowState.Deleted) continue;
+                var pid = Convert.ToString(r["PurchaseInvoiceDetailId"]);
+                if (!string.IsNullOrEmpty(pid)) ids.Add(pid.Replace("'", "''"));
+            }
+            if (ids.Count == 0) return string.Empty;
+            return " AND d.Id NOT IN ('" + string.Join("','", ids) + "')";
+        }
+
         private void btnLayTuHoaDonMua_Click(object sender, EventArgs e)
         {
-            string outId, outText;
-            Lookup.SearchLookupSingle(strQueryPIUnreceived, columnsPIText, widthPI, "", out outId, out outText);
-            if (string.IsNullOrEmpty(outId)) return;
+            // 1) Ràng buộc theo HĐ đã chọn (nếu có) + loại bỏ dòng đã nằm trên grid
+            string whereExtra = "";
+            if (!string.IsNullOrEmpty(_selectedPIId))
+                whereExtra += " AND m.Id = '" + _selectedPIId.Replace("'", "''") + "'";
+            whereExtra += BuildExcludeWhereFromGrid();
 
-            _selectedPIId = outId;
+            string finalQuery = strQueryPIRemainingDetail + whereExtra;
 
-            // lấy header HĐ
-            var dtPI = Models.SQL.GetData(
-                @"SELECT DocDate, SupplierId, WarehouseId, Notes, TotalQty, TotalMoney
-                  FROM PurchaseInvoiceMaster WHERE Id= '" + _selectedPIId + "'");
+            // 2) Chọn nhiều dòng còn lại
+            DataTable dtPicked;
+            Lookup.SearchLookupMulti(finalQuery, columnsPIRemainText, widthPIRemain, out dtPicked);
+            if (dtPicked == null || dtPicked.Rows.Count == 0) return;
 
-            if (dtPI.Rows.Count == 0) { Alert.Error("Không tìm thấy hóa đơn mua."); return; }
-            var h = dtPI.Rows[0];
+            // 3) Ràng buộc: cùng 1 HĐ & cùng NCC
+            string piId = dtPicked.Rows[0]["PIMasterId"].ToString();
+            string supp = dtPicked.Rows[0]["SupplierId"].ToString();
+            foreach (DataRow r in dtPicked.Rows)
+            {
+                if (r["PIMasterId"].ToString() != piId)
+                { Alert.Error("Vui lòng chọn các dòng thuộc CÙNG một hóa đơn mua."); return; }
+                if (r["SupplierId"].ToString() != supp)
+                { Alert.Error("Các dòng có nhà cung cấp khác nhau."); return; }
+            }
 
-            // Supplier
-            txtSupplierId.Text = h["SupplierId"].ToString();
+            _selectedPIId = piId; // gắn vào PNK
+            txtSupplierId.Text = supp;
             lblSupplierName.Text = Models.SQL.GetValue("SELECT Name FROM Supplier WHERE Id=@Id",
-                new object[,] { { "@Id", txtSupplierId.Text } });
+                new object[,] { { "@Id", supp } });
 
-            // Date
-            dtpVoucherDate.Value = Convert.ToDateTime(h["DocDate"]);
+            // Ngày chứng từ theo HĐ
+            dtpVoucherDate.Value = Convert.ToDateTime(dtPicked.Rows[0]["DocDate"]);
+            txtNote.Text = "Tạo từ HĐ mua: " + _selectedPIId;
 
-            // Warehouse: nếu HĐ chưa có kho thì bắt chọn
-            string wh = h["WarehouseId"] == DBNull.Value ? "" : h["WarehouseId"].ToString();
-            if (string.IsNullOrEmpty(wh))
+            // Kho: nếu HĐ có WarehouseId thì ưu tiên, nếu không thì hỏi chọn
+            var wh = Models.SQL.GetValue("SELECT WarehouseId FROM PurchaseInvoiceMaster WHERE Id=@Id",
+                new object[,] { { "@Id", _selectedPIId } });
+            if (!string.IsNullOrEmpty(wh))
+            {
+                txtWarehouseId.Text = wh;
+                if (string.IsNullOrEmpty(lblWarehouseName.Text))
+                    lblWarehouseName.Text = Models.SQL.GetValue("SELECT Name FROM Warehouse WHERE Id=@Id",
+                        new object[,] { { "@Id", wh } });
+            }
+            else if (string.IsNullOrEmpty(txtWarehouseId.Text))
             {
                 string outWhId, outWhName;
                 Lookup.SearchLookupSingle(strQueryWare, columnsWareText, widthWare, "", out outWhId, out outWhName);
                 if (string.IsNullOrEmpty(outWhId)) { Alert.Error("Chưa chọn kho nhập"); return; }
-                wh = outWhId; lblWarehouseName.Text = outWhName;
+                txtWarehouseId.Text = outWhId; lblWarehouseName.Text = outWhName;
             }
-            txtWarehouseId.Text = wh;
-            if (string.IsNullOrEmpty(lblWarehouseName.Text))
-                lblWarehouseName.Text = Models.SQL.GetValue("SELECT Name FROM Warehouse WHERE Id=@Id", new object[,] { { "@Id", wh } });
 
-            // Note
-            txtNote.Text = "Tạo từ HĐ mua: " + _selectedPIId;
-
-            // Đổ chi tiết từ HĐ
-            var dtLines = Models.SQL.GetData(
-                @"SELECT a.ProductId, b.Name AS ProductsName, a.Qty, a.UnitPrice, a.LineAmount, a.Notes
-                  FROM PurchaseInvoiceDetail a INNER JOIN Products b ON a.ProductId=b.Id
-                  WHERE a.PIMasterId= '" + _selectedPIId + "'");
-
-            dtDetail.Rows.Clear();
-            foreach (DataRow r in dtLines.Rows)
+            // 4) Đổ dòng đã chọn vào lưới + set PurchaseInvoiceDetailId
+            foreach (DataRow r in dtPicked.Rows)
             {
+                string pid = r["ProductId"].ToString();
+                string pname = r["ProductName"].ToString();
+                decimal remain = ToDec(r["RemainQty"].ToString());
+                decimal price = ToDec(r["UnitPrice"].ToString());
+                decimal sum = remain * price;
+
                 var nr = dtDetail.NewRow();
-                nr["ProductsId"] = r["ProductId"].ToString();
-                nr["ProductsName"] = r["ProductsName"].ToString();
-                nr["Amount"] = string.Format(CultureInfo.InvariantCulture, "{0:N0}", r["Qty"]);
-                nr["Price"] = string.Format(CultureInfo.InvariantCulture, "{0:N0}", r["UnitPrice"]);
-                nr["TotalMoney"] = string.Format(CultureInfo.InvariantCulture, "{0:N0}", r["LineAmount"]);
-                nr["Note"] = r["Notes"]?.ToString() ?? "";
+                nr["ProductsId"] = pid;
+                nr["ProductsName"] = pname;
+                nr["Amount"] = string.Format(CultureInfo.InvariantCulture, "{0:N0}", remain);
+                nr["Price"] = string.Format(CultureInfo.InvariantCulture, "{0:N0}", price);
+                nr["TotalMoney"] = string.Format(CultureInfo.InvariantCulture, "{0:N0}", sum);
+                nr["Note"] = "Từ HĐ: " + _selectedPIId + " | Dòng: " + r["PIDetailId"].ToString();
+                nr["PurchaseInvoiceDetailId"] = r["PIDetailId"].ToString();
                 dtDetail.Rows.Add(nr);
             }
+
             dtDetail.AcceptChanges();
             Total();
         }
@@ -275,6 +351,54 @@ namespace PMQuanLyHangTonKho.Views
             }
             if (dtgvDetail.Rows.Count == 0) { Alert.Error("Chưa nhập thông tin chi tiết"); return; }
 
+            // Không cho nhập vượt còn lại theo từng PIDetail
+            foreach (DataGridViewRow r in dtgvDetail.Rows)
+            {
+                if (r.IsNewRow) continue;
+
+                var drv = r.DataBoundItem as DataRowView;
+                string pidDetail = null;
+                if (drv != null && drv.Row.Table.Columns.Contains("PurchaseInvoiceDetailId"))
+                    pidDetail = drv.Row["PurchaseInvoiceDetailId"] == DBNull.Value ? null : drv.Row["PurchaseInvoiceDetailId"].ToString();
+
+                if (!string.IsNullOrEmpty(pidDetail))
+                {
+                    // SL đặt trong HĐ
+                    var orderedStr = Models.SQL.GetValue(
+                        "SELECT CONVERT(decimal(18,3), Qty) FROM PurchaseInvoiceDetail WHERE Id=@PID",
+                        new object[,] { { "@PID", pidDetail } });
+                    decimal ordered = string.IsNullOrEmpty(orderedStr) ? 0m : ToDec(orderedStr);
+
+                    // Đã nhập trước đó (các PNK khác)
+                    var receivedStr = Models.SQL.GetValue(
+                        "SELECT CONVERT(decimal(18,3), ISNULL(SUM(Amount),0)) FROM ImportStockDetail WHERE PurchaseInvoiceDetailId=@PID",
+                        new object[,] { { "@PID", pidDetail } });
+                    decimal received = string.IsNullOrEmpty(receivedStr) ? 0m : ToDec(receivedStr);
+
+                    // SL đang chuẩn bị nhập ở phiếu hiện tại (cộng các dòng cùng PIDetail)
+                    decimal qtyInThisVoucher = 0m;
+                    foreach (DataGridViewRow rr in dtgvDetail.Rows)
+                    {
+                        if (rr.IsNewRow) continue;
+                        var drv2 = rr.DataBoundItem as DataRowView;
+                        string pid2 = null;
+                        if (drv2 != null && drv2.Row.Table.Columns.Contains("PurchaseInvoiceDetailId"))
+                            pid2 = drv2.Row["PurchaseInvoiceDetailId"] == DBNull.Value ? null : drv2.Row["PurchaseInvoiceDetailId"].ToString();
+                        if (pid2 == pidDetail)
+                            qtyInThisVoucher += ToDec((rr.Cells["Amount"].Value ?? "0").ToString());
+                    }
+
+                    decimal remain = ordered - received;
+                    if (qtyInThisVoucher > remain + 0.0001m)
+                    {
+                        string pname = (r.Cells["ProductsName"].Value ?? "").ToString();
+                        Alert.Error($"Dòng HĐ đã vượt còn lại:\n- SP: {pname}\n- Đặt: {ordered:N3}, Đã nhập: {received:N3}, Còn: {remain:N3}\n- Bạn đang nhập: {qtyInThisVoucher:N3}");
+                        return;
+                    }
+                }
+            }
+
+
             // TÍNH TỔNG & CHUẨN HÓA
             Total();
             decimal totalQty = ToDec(txtTotalAmount.Text); // TotalAmount trong Import = tổng SL
@@ -343,36 +467,35 @@ namespace PMQuanLyHangTonKho.Views
                 decimal sum = ToDec((r.Cells["TotalMoney"].Value ?? "0").ToString());
                 string note = (r.Cells["Note"].Value ?? "").ToString();
 
-                string insDet =
-                    @"INSERT INTO ImportStockDetail
-                (Id, ImportStockMasterId, ProductsId, Amount, Price, TotalMoney, Note)
-              VALUES
-                (@Id, @Mid, @Pid, @Qty, @Price, @Sum, @Note)";
+                string insDet = @"
+                        INSERT INTO ImportStockDetail
+                            (Id, ImportStockMasterId, ProductsId, Amount, Price, TotalMoney, Note, PurchaseInvoiceDetailId)
+                        VALUES
+                            (@Id, @Mid, @Pid, @Qty, @Price, @Sum, @Note, @PIDetailId)";
                 Models.SQL.RunQuery(insDet, new object[,]
                 {
-            {"@Id",  Guid.NewGuid().ToString("N")},
-            {"@Mid", txtId.Text.Trim()},
-            {"@Pid", prod},
-            {"@Qty", qty},
-            {"@Price", price},
-            {"@Sum", sum},
-            {"@Note", note}
+                        {"@Id",  Guid.NewGuid().ToString("N")},
+                        {"@Mid", txtId.Text.Trim()},
+                        {"@Pid", prod},
+                        {"@Qty", qty},
+                        {"@Price", price},
+                        {"@Sum", sum},
+                        {"@Note", note},
+                        {"@PIDetailId",(r.DataBoundItem is DataRowView drv && drv.Row.Table.Columns.Contains("PurchaseInvoiceDetailId")) ? (object)(drv.Row["PurchaseInvoiceDetailId"] ?? DBNull.Value) : DBNull.Value }
                 });
 
-                string insPost =
-                    @"INSERT INTO PostData
-                (VoucherId, VoucherCode, VoucherDate, ProductsId, Amount, Price, TotalMoney)
-              VALUES
-                (@Vid, 'PNK', @Vdate, @Pid, @Amt, @Price, @TMoney)";
-                Models.SQL.RunQuery(insPost, new object[,]
-                {
-            {"@Vid", txtId.Text.Trim()},
-            {"@Vdate", dtpVoucherDate.Value},
-            {"@Pid", prod},
-            {"@Amt", qty},
-            {"@Price", price},
-            {"@TMoney", sum}
-                });
+                string insPost = @"
+                    INSERT INTO PostData
+                      (VoucherId, VoucherCode, VoucherDate, WarehouseId, ProductsId, Amount, Price, TotalMoney)
+                    VALUES
+                      (@Vid, 'PNK', @Vdate, @Wh, @Pid, @Amt, @Price, @TMoney)";
+
+                Models.SQL.RunQuery(insPost, new object[,] {
+                      {"@Vid", txtId.Text.Trim()}, {"@Vdate", dtpVoucherDate.Value},
+                      {"@Wh", txtWarehouseId.Text.Trim()},
+                      {"@Pid", prod}, {"@Amt", qty}, {"@Price", price}, {"@TMoney", sum}
+                    });
+
             }
 
             frmImportStockMaster.isLoad = true;
