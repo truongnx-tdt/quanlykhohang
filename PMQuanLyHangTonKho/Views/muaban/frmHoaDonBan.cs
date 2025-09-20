@@ -55,7 +55,7 @@ namespace PMQuanLyHangTonKho.Views.muaban
         private void frm_Load(object sender, EventArgs e)
         {
             LoadData();
-            DLLSystem.RoleMenu(this, menuStrip, menuThem, menuSua, menuXoa, menuXuatExcel);
+            DLLSystem.RoleMenu(this, menuStrip, menuThem, menuSua, menuXoa, null);
         }
 
         public void LoadData(string key = null)
@@ -82,7 +82,7 @@ namespace PMQuanLyHangTonKho.Views.muaban
         private void menuTimKiem_Click(object sender, EventArgs e)
         {
             string key = "";
-            ListEdit.LoadFormSearchList(columnsValuesSearch, columnsTextSearch, new Point(400, 185), out key, true);
+            ListEdit.LoadFormSearchListV2(columnsValuesSearch, columnsTextSearch, new Point(400, 185), out key, true);
             LoadData(key);
         }
 
@@ -124,5 +124,7 @@ namespace PMQuanLyHangTonKho.Views.muaban
 
             LoadData();
         }
+
+       
     }
 }

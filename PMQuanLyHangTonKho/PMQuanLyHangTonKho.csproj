@@ -152,6 +152,7 @@
     </Compile>
     <Compile Include="Lib\ExcelExporter.cs" />
     <Compile Include="Lib\Helper.cs" />
+    <Compile Include="Models\DTO\PIDTO.cs" />
     <Compile Include="Models\DTO\PriceListDTO.cs" />
     <Compile Include="Views\frmMenuMuaBan.cs">
       <SubType>Form</SubType>

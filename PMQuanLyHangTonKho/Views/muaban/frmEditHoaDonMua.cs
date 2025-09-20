@@ -191,9 +191,9 @@ namespace PMQuanLyHangTonKho.Views.muaban
             if (!string.IsNullOrEmpty(priceStr))
             {
                 decimal price = Convert.ToDecimal(priceStr);
-                dtgvDetail.Rows[rowIndex].Cells["UnitPrice"].Value = FormatN0(price);
+                dtgvDetail.Rows[rowIndex].Cells["UnitPrice"].Value = (price);
                 decimal total = price * qty;
-                dtgvDetail.Rows[rowIndex].Cells["LineAmount"].Value = FormatN0(total);
+                dtgvDetail.Rows[rowIndex].Cells["LineAmount"].Value = (total);
                 Total();
             }
         }

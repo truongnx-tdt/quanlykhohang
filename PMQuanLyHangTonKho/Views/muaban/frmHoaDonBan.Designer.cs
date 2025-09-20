@@ -34,7 +34,6 @@
             this.menuThem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSua = new System.Windows.Forms.ToolStripMenuItem();
             this.menuXoa = new System.Windows.Forms.ToolStripMenuItem();
-            this.menuXuatExcel = new System.Windows.Forms.ToolStripMenuItem();
             this.menuLamMoi = new System.Windows.Forms.ToolStripMenuItem();
             this.menuThoat = new System.Windows.Forms.ToolStripMenuItem();
             this.menuTimKiem = new System.Windows.Forms.ToolStripMenuItem();
@@ -54,7 +53,6 @@
             this.menuThem,
             this.menuSua,
             this.menuXoa,
-            this.menuXuatExcel,
             this.menuLamMoi,
             this.menuThoat,
             this.menuTimKiem});
@@ -84,13 +82,6 @@
             this.menuXoa.Name = "menuXoa";
             this.menuXoa.Size = new System.Drawing.Size(57, 20);
             this.menuXoa.Text = "Xóa";
-            // 
-            // menuXuatExcel
-            // 
-            this.menuXuatExcel.Image = ((System.Drawing.Image)(resources.GetObject("menuXuatExcel.Image")));
-            this.menuXuatExcel.Name = "menuXuatExcel";
-            this.menuXuatExcel.Size = new System.Drawing.Size(94, 20);
-            this.menuXuatExcel.Text = "Xuất Excel";
             // 
             // menuLamMoi
             // 
@@ -160,7 +151,6 @@
         private System.Windows.Forms.ToolStripMenuItem menuThem;
         private System.Windows.Forms.ToolStripMenuItem menuSua;
         private System.Windows.Forms.ToolStripMenuItem menuXoa;
-        private System.Windows.Forms.ToolStripMenuItem menuXuatExcel;
         private System.Windows.Forms.ToolStripMenuItem menuLamMoi;
         private System.Windows.Forms.ToolStripMenuItem menuThoat;
         private System.Windows.Forms.ToolStripMenuItem menuTimKiem;

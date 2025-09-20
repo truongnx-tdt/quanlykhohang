@@ -1,5 +1,8 @@
-﻿using PMQuanLyHangTonKho.Lib;
+﻿using ClosedXML.Excel;
+using PMQuanLyHangTonKho.Lib;
+using PMQuanLyHangTonKho.Models.DTO;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
@@ -86,7 +89,7 @@ namespace PMQuanLyHangTonKho.Views.muaban
         private void menuTimKiem_Click(object sender, EventArgs e)
         {
             string key = "";
-            ListEdit.LoadFormSearchList(columnsValuesSearch, columnsTextSearch, new Point(400, 185), out key, true);
+            ListEdit.LoadFormSearchListV2(columnsValuesSearch, columnsTextSearch, new Point(400, 185), out key, true);
             LoadData(key);
         }
 
@@ -128,5 +131,94 @@ namespace PMQuanLyHangTonKho.Views.muaban
 
             LoadData();
         }
+
+        private void menuXuatExcel_Click(object sender, EventArgs e)
+        {
+            if (dtgvMaster.RowCount == 0)
+            {
+                Alert.Error("Chưa có dữ liệu để xuất Excel");
+                return;
+            }
+
+            // Lấy dữ liệu từ DataGridView
+            var priceListDTO = new List<PIDTO>();
+            var customers = new List<PIDetailDTO>();
+            foreach (DataGridViewRow row in dtgvMaster.Rows)
+            {
+                priceListDTO.Add(new PIDTO
+                {
+                    Id = Helper.GetCell<string>(row, "Id"),
+                    DocDate = Helper.GetCell<string>(row, "DocDate"),
+                    SupplierId = Helper.GetCell<string>(row, "SupplierId"),
+                    PriceListId = Helper.GetCell<string>(row, "PriceListId"),
+                    Notes = Helper.GetCell<string>(row, "Notes"),
+                    TotalMoney = Helper.GetCell<string>(row, "TotalMoney"),
+                    TotalQty = Helper.GetCell<string>(row, "TotalQty"),
+                    UserCreate = Helper.GetCell<string>(row, "UserCreate"),
+                    DateCreate = Helper.GetCell<DateTime?>(row, "DateCreate") ?? DateTime.MinValue,
+                    UserUpdate = Helper.GetCell<string>(row, "UserUpdate"),
+                    DateUpdate = Helper.GetCell<DateTime?>(row, "DateUpdate") ?? DateTime.MinValue
+                });
+
+                // Chi tiết from Data base
+                var queryDetail = $@"SELECT PIMasterId, a.ProductId, b.Name,
+                                             a.Qty, a.UnitPrice, a.LineAmount, a.Notes
+                                      FROM PurchaseInvoiceDetail a
+                                      INNER JOIN Products b ON a.ProductId = b.Id
+                                      WHERE a.PIMasterId = @PIMasterId";
+                var dtDetail = Models.SQL.QueryList<PIDetailDTO>(queryDetail, new Dictionary<string, object> { { "PIMasterId", Helper.GetCell<string>(row, "Id") } },
+                    projector: r => new PIDetailDTO
+                    {
+                        PIMasterId = r["PIMasterId"].ToString(),
+                        ProductId = r["ProductId"].ToString(),
+                        Name = r["Name"].ToString(),
+                        Qty = (r["Qty"]).ToString(),
+                        UnitPrice = (r["UnitPrice"]).ToString(),
+                        LineAmount = (r["LineAmount"]).ToString(),
+                        Notes = r["Notes"] as string
+                    });
+
+                foreach (var item in dtDetail)
+                {
+                    customers.Add(item);
+                }
+            }
+
+            var sheets = new List<ExcelExporter.ObjectSheetSpec>
+            {
+                new ExcelExporter.ObjectSheetSpec(
+                    "Hóa đơn mua",
+                    priceListDTO,
+                    new List<ExcelExporter.ObjectColumnSpec>{
+                        new ExcelExporter.ObjectColumnSpec{ Header="Mã HĐ", Selector=o=>((PIDTO)o).Id },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Ngày HĐ", Selector=o=>((PIDTO)o).DocDate, DataType=XLDataType.DateTime, NumberFormat="dd/MM/yyyy HH:mm:ss" },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Nhà cung cấp", Selector=o=>((PIDTO)o).SupplierId },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Bảng giá", Selector=o=>((PIDTO)o).PriceListId },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Ghi chú", Selector=o=>((PIDTO)o).Notes },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Tổng tiền", Selector=o=>((PIDTO)o).TotalMoney },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Tổng số lượng", Selector=o=>((PIDTO)o).TotalQty },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Người tạo", Selector=o=>((PIDTO)o).UserCreate },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Ngày tạo", Selector=o=>((PIDTO)o).DateCreate, DataType=XLDataType.DateTime, NumberFormat="dd/MM/yyyy HH:mm:ss" },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Người sửa", Selector=o=>((PIDTO)o).UserUpdate },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Ngày sửa", Selector=o=>((PIDTO)o).DateUpdate, DataType=XLDataType.DateTime, NumberFormat="dd/MM/yyyy HH:mm:ss" }
+                    }
+                ),
+                new ExcelExporter.ObjectSheetSpec(
+                    "Chi tiết",
+                    customers,
+                    new List<ExcelExporter.ObjectColumnSpec>{
+                        new ExcelExporter.ObjectColumnSpec{ Header="Mã HĐ", Selector=o=>((PIDetailDTO)o).PIMasterId },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Mã SP", Selector=o=>((PIDetailDTO)o).ProductId },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Tên SP", Selector=o=>((PIDetailDTO)o).Name },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Số lượng", Selector=o=>((PIDetailDTO)o).Qty },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Giá", Selector=o=>((PIDetailDTO)o).UnitPrice },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Thành tiền", Selector=o=>((PIDetailDTO)o).LineAmount },
+                        new ExcelExporter.ObjectColumnSpec{ Header="Ghi chú", Selector=o=>((PIDetailDTO)o).Notes },
+                    }
+                )
+            };
+            ExcelExporter.ExportObjectsMulti("BaoCao_hdm.xlsx", sheets);
+        }
+
     }
 }

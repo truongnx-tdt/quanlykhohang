@@ -15,11 +15,22 @@ namespace PMQuanLyHangTonKho.Views
     public partial class frmTakingStockMaster: Form
     {
         string strQueryMaster = "SELECT * FROM TakingStockMaster";
-        string strQueryDetail = "SELECT TakingStockMasterId,ProductsId,b.Name,Amount,Note FROM TakingStockDetail a INNER JOIN Products b ON a.ProductsId = b.Id";
+
+        string strQueryDetail =
+      "SELECT a.ProductsId, b.Name AS ProductsName," +
+      "CONVERT(VARCHAR, a.Amount) AS Amount," +
+      "CONVERT(VARCHAR, ISNULL(a.SystemAmount,0)) AS SystemAmount," +
+      "CONVERT(VARCHAR, ISNULL(a.DiffAmount,0))   AS DiffAmount," +
+      "a.Note " +
+      "FROM TakingStockDetail a INNER JOIN Products b ON a.ProductsId = b.Id";
+
+        string[] columnsNameDetail = new string[]
+        { "Mã sản phẩm", "Tên sản phẩm", "Thực tế", "Trên PM", "Chênh lệch", "Ghi chú" };
+
+        int[] widthDetail = new int[] { 120, 250, 110, 110, 110, 250 };
+
         string[] columnsNameMaster = new string[] { "Mã phiếu", "Ngày nhập","Mã kho", "Người kiểm kê 1", "Người kiểm kê 2", "Người kiểm kê 3", "Ghi chú", "Tổng số lượng", "Người tạo", "Ngày tạo", "Người sửa", "Ngày sửa" };
         int[] widthMaster = new int[] { 120, 120, 180, 180,180, 250, 120, 120, 120, 120, 120 };
-        string[] columnsNameDetail = new string[] { "Mã phiếu", "Mã sản phẩm", "Tên sản phẩm", "Số lượng", "Ghi chú" };
-        int[] widthDetail = new int[] { 120, 120, 250, 120, 250 };
 
         string[] columnsValuesSearch = new string[] { "WarehouseId", "EmployeesId1", "EmployeesId2", "EmployeesId3", "Note" };
         string[] columnsTextSearch = new string[] { "Mã kho", "Người kiểm kê 1", "Người kiểm kê 2", "Người kiểm kê 3", "Ghichú" };

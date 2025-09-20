@@ -91,6 +91,7 @@
             this.menuXuatExcel.Name = "menuXuatExcel";
             this.menuXuatExcel.Size = new System.Drawing.Size(94, 20);
             this.menuXuatExcel.Text = "Xuất Excel";
+            this.menuXuatExcel.Click += new System.EventHandler(this.menuXuatExcel_Click);
             // 
             // menuLamMoi
             // 

@@ -46,7 +46,7 @@ namespace PMQuanLyHangTonKho.Models
             //    TrustServerCertificate = true
             //};
             //return stringBuilder.ConnectionString;
-            return "Server=localhost,1433;Database=SQLQuanLyHangTonKho;User ID=sa;Password=SQlserver123@;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True";
+            return "Server=localhost,1433;Database=SQLQuanLyHangTonKho;User ID=sa;Password=Sqlserver123@;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True";
         }
         public static DataTable GetData(string sql)
         {

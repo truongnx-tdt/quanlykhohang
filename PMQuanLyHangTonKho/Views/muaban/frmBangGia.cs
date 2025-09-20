@@ -102,7 +102,7 @@ namespace PMQuanLyHangTonKho.Views.muaban
         private void menuTimKiem_Click(object sender, EventArgs e)
         {
             string key = "";
-            ListEdit.LoadFormSearchList(columnsValuesSearch, columnsTextSearch, new System.Drawing.Point(400, 185), out key, true);
+            ListEdit.LoadFormSearchListV2(columnsValuesSearch, columnsTextSearch, new System.Drawing.Point(400, 185), out key, true);
             LoadData(key);
         }
 
